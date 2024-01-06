@@ -9,14 +9,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sasmeee/igdl": "^1.0.0",
     "axios": "^1.6.5",
+    "btch-downloader": "^2.3.1-alpha",
     "fs-extra": "^11.2.0",
     "get-pixels": "^3.3.3",
     "jsqr": "^1.4.0",
     "nodemon": "^3.0.2",
+    "puppeteer": "^21.7.0",
     "qr-image": "^3.2.0",
     "qrcode": "^1.5.3",
     "qrcode-terminal": "^0.12.0",
+    "social_media_downloader": "^1.0.6",
     "whatsapp-web.js": "^1.23.0"
   }
 }

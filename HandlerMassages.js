@@ -5,10 +5,23 @@ const setting = JSON.parse(fs.readFileSync("./settings/settings.json"));
 
 let { ownerNumber, groupLimit, memberLimit, prefix, apiNoBg } = setting;
 
-const { menuId, anime, qrCode, gempa } = require("./lib/index.js");
+const {
+  menuId,
+  anime,
+  qrCode,
+  gempa,
+  sosmedDownloader,
+} = require("./lib/index.js");
+
 const { readQr } = require("./lib/qr.js");
 
-// HandlerMassages.js
+const isUrl = (url) => {
+  return url.match(
+    new RegExp(
+      /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi
+    )
+  );
+};
 
 const HandlerMassages = async (client, message) => {
   try {
@@ -57,6 +70,7 @@ const HandlerMassages = async (client, message) => {
 
     command = body.slice(1).trim().split(/ +/).shift().toLowerCase();
     const args = body.trim().split(/ +/).slice(1);
+    const url = args.length !== 0 ? args[0] : "";
 
     switch (command) {
       case "ping":
@@ -256,6 +270,120 @@ const HandlerMassages = async (client, message) => {
             "Terjadi kesalahan saat mengambil data gempa terkini."
           );
         }
+        break;
+
+      // Downloader
+      case "ig":
+        if (args.length == 0 || !isUrl(url))
+          return message.reply(
+            `Silahkan kirim command ${prefix}ig {url instagram}`
+          );
+
+        try {
+          const instagram = await sosmedDownloader.instagram(url);
+          message.reply("Sedang mengunduh kontent instagram");
+          for (const media of instagram) {
+            try {
+              const linkIg = await MessageMedia.fromUrl(media.download_link, {
+                unsafeMime: true,
+              });
+              await message.reply(linkIg);
+            } catch (error) {
+              console.error("Error in sending media message:", error);
+              return message.reply(
+                "Terjadi kesalahan saat mengirim konten instagram"
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching Instagram media:", error);
+          return message.reply(
+            "Terjadi kesalahan saat mengunduh konten Instagram"
+          );
+        }
+        break;
+      case "tt":
+        if (args.length == 0 || !isUrl(url))
+          return message.reply(
+            `Silahkan kirim command ${prefix}tt {url tiktok}`
+          );
+        try {
+          const tiktok = await sosmedDownloader.tiktok(url);
+          message.reply("Sedang mengunduh kontent tiktok");
+
+          for (const media of tiktok.video) {
+            try {
+              const linkVideoTt = await MessageMedia.fromUrl(media, {
+                unsafeMime: true,
+              });
+
+              await message.reply(linkVideoTt, from, {
+                caption: `Judul : ${tiktok.title}\nCreator : ${media.creator}`,
+              });
+            } catch (error) {
+              console.error("Error in sending media message:", error);
+              return message.reply(
+                "Terjadi kesalahan saat mengirim konten tiktok"
+              );
+            }
+          }
+
+          try {
+            const linkAudioTt = await MessageMedia.fromUrl(tiktok.audio[0], {
+              filename: "audio.mp3",
+              unsafeMime: true,
+            });
+
+            await message.reply(linkAudioTt, from, {
+              sendAudioAsVoice: true,
+              caption: `Judul Musik : ${tiktok.title_audio}`,
+            });
+          } catch (error) {
+            console.error("Error in sending media message:", error);
+            return message.reply(
+              "Terjadi kesalahan saat mengirim konten tiktok"
+            );
+          }
+        } catch (error) {
+          console.error("Error fetching tiktok media:", error);
+          return message.reply(
+            "Terjadi kesalahan saat mengunduh konten tiktok"
+          );
+        }
+
+        break;
+      case "fb":
+        if (args.length == 0 || !isUrl(url))
+          return message.reply(
+            `Silahkan kirim command ${prefix}fb {url facebook}`
+          );
+        const downloadFb = await sosmedDownloader.facebook(url);
+        console.log(downloadFb);
+        break;
+      case "twt":
+        if (args.length == 0 || !isUrl(url))
+          return message.reply(
+            `Silahkan kirim command ${prefix}twt {url twitter}`
+          );
+        try {
+          const downloadTwt = await sosmedDownloader.twitters(url);
+          console.log(downloadTwt.url);
+          const hdTwt = await MessageMedia.fromUrl(downloadTwt.url[1].sd);
+          await client.sendMessage(from, hdTwt, {
+            caption: downloadTwt.tittle,
+          });
+        } catch (error) {
+          console.error("Error in sending message:", error);
+          return message.reply("Terjadi kesalahan saat mengirim media");
+        }
+        break;
+      case "yt":
+        if (args.length == 0 || !isUrl(url))
+          return message.reply(
+            `Silahkan kirim command ${prefix}yt {url youtube}`
+          );
+        const downloadYt = await sosmedDownloader.youtubes(url);
+        console.log(downloadYt);
         break;
     }
   } catch (err) {
