@@ -1,0 +1,22 @@
+{
+  "name": "whatssapp-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.5",
+    "fs-extra": "^11.2.0",
+    "get-pixels": "^3.3.3",
+    "jsqr": "^1.4.0",
+    "nodemon": "^3.0.2",
+    "qr-image": "^3.2.0",
+    "qrcode": "^1.5.3",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}
