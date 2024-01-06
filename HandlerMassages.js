@@ -216,6 +216,7 @@ const HandlerMassages = async (client, message) => {
               "Terjadi kesalahan saat mengambil list kategori anime."
             );
           });
+        break;
       case "nsfw":
         if (args.length == 0)
           return message.reply(
@@ -225,6 +226,7 @@ const HandlerMassages = async (client, message) => {
         const getNsfw = await anime.nsfw(category);
         const media = await MessageMedia.fromUrl(getNsfw);
         client.sendMessage(from, media);
+        break;
       case "gempa":
         try {
           const earthquakeData = await gempa.gempaterkini();
