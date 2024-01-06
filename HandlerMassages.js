@@ -99,8 +99,8 @@ const HandlerMassages = async (client, message) => {
             const media = await getBodyImage.downloadMedia();
             await client.sendMessage(from, media, {
               sendMediaAsSticker: true,
-              stickerAuthor: "client Bot",
-              stickerName: "client Sticker",
+              stickerAuthor: "Muhamamd Novel",
+              stickerName: "Pell Bot",
             });
           } catch (error) {
             console.error("Error generating sticker:", error.message);
