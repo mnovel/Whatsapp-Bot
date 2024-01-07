@@ -28,6 +28,7 @@ const isUrl = (url) => {
 const HandlerMassages = async (client, message) => {
   try {
     const chat = await message.getChat();
+    const { isMyContact, name, number, pushname } = await message.getContact();
     const {
       lastMessage: {
         author,
@@ -40,7 +41,6 @@ const HandlerMassages = async (client, message) => {
       },
       participants,
       isGroup,
-      lastMessage,
     } = chat;
 
     let { body } = message;
@@ -72,7 +72,7 @@ const HandlerMassages = async (client, message) => {
         message.reply(`Pong!!!!\nSpeed: ${processTIme} _Second_`);
         break;
       case "menu":
-        message.reply(menuId.textMenu(notifyName));
+        message.reply(menuId.textMenu(pushname));
         break;
       case "menuAdmin":
         message.reply(menuId.textAdmin());
