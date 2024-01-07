@@ -5,9 +5,9 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const client = new Client({
   puppeteer: {
     executablePath:
-      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "/usr/bin/google-chrome",
   },
-  ffmpegPath: "./ffmpeg/ffmpeg.exe",
+  ffmpegPath: "/usr/bin/ffmpeg",
   authStrategy: new LocalAuth({ clientId: "pell-bot", dataPath: "session" }),
 });
 
