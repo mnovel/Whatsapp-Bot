@@ -22,5 +22,15 @@ client.on("ready", () => {
 client.initialize();
 
 client.on("message", async (msg) => {
+  const currentTime = new Date().getTime();
+  const messageTime = msg.timestamp * 1000; // Convert seconds to milliseconds
+
+  // Set a threshold (e.g., skip messages older than 5 minutes)
+  const threshold = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+  if (currentTime - messageTime > threshold) {
+    console.log(`Skipped older message: ${msg.body}`);
+    return;
+  }
   await HandlerMassages(client, msg);
 });

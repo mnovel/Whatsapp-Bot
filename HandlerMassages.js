@@ -1,8 +1,9 @@
 const fs = require("fs-extra");
 const { MessageMedia } = require("whatsapp-web.js");
+const moment = require("moment-timezone");
+moment.tz.setDefault("Asia/Jakarta").locale("id");
 
 const setting = JSON.parse(fs.readFileSync("./settings/settings.json"));
-
 let { ownerNumber, groupLimit, memberLimit, prefix, apiNoBg } = setting;
 
 const {
@@ -11,6 +12,7 @@ const {
   qrCode,
   gempa,
   sosmedDownloader,
+  nik,
 } = require("./lib/index.js");
 
 const { readQr } = require("./lib/qr.js");
@@ -25,39 +27,22 @@ const isUrl = (url) => {
 
 const HandlerMassages = async (client, message) => {
   try {
+    const chat = await message.getChat();
     const {
-      ack,
-      author,
-      broadcast,
-      deviceType,
-      duration,
-      forwardingScore,
-      from,
-      fromMe,
-      hasMedia,
-      hasQuotedMsg,
-      hasReaction,
-      id,
-      inviteV4,
-      isEphemeral,
-      isForwarded,
-      isGif,
-      isStarred,
-      isStatus,
-      links,
-      location,
-      mediaKey,
-      mentionedIds,
-      orderId,
-      rawData,
-      timestamp,
-      to,
-      token,
-      type,
-      vCards,
-      caption,
-      notifyName,
-    } = message;
+      lastMessage: {
+        author,
+        from,
+        hasMedia,
+        hasQuotedMsg,
+        type,
+        caption,
+        notifyName,
+      },
+      participants,
+      isGroup,
+      lastMessage,
+    } = chat;
+
     let { body } = message;
 
     let command =
@@ -71,12 +56,21 @@ const HandlerMassages = async (client, message) => {
     command = body.slice(1).trim().split(/ +/).shift().toLowerCase();
     const args = body.trim().split(/ +/).slice(1);
     const url = args.length !== 0 ? args[0] : "";
+    const bot = participants.find(
+      (a) => a.id._serialized == client.info.wid._serialized
+    );
+    const user = participants.find((a) => a.id._serialized == author);
+    const isBotAdmin = bot && (bot.isAdmin || bot.isSuperAdmin);
+    const isUserAdmin = user && (user.isAdmin || user.isSuperAdmin);
+    const quotedMessage = await message.getQuotedMessage();
 
     switch (command) {
       case "ping":
-        message.reply("pong");
+        processTIme = moment
+          .duration(moment() - moment(chat.lastMessage._data.t * 1000))
+          .asSeconds();
+        message.reply(`Pong!!!!\nSpeed: ${processTIme} _Second_`);
         break;
-
       case "menu":
         message.reply(menuId.textMenu(notifyName));
         break;
@@ -84,17 +78,86 @@ const HandlerMassages = async (client, message) => {
         message.reply(menuId.textAdmin());
         break;
 
+      case "mutegroup":
+        if (args.length == 0)
+          return message.reply(
+            `Silahkan kirim command ${prefix}mutegroup {on / off}`
+          );
+        if (!isGroup)
+          return message.reply(
+            "Command ini hanya bisa digunakan didalam group"
+          );
+        if (!isBotAdmin)
+          return message.reply(
+            "Command ini hanya bisa digunakan jika bot menjadi admin group"
+          );
+        if (!isUserAdmin)
+          return message.reply(
+            "Command ini hanya bisa digunakan oleh admin group"
+          );
+
+        const status = args[0] == "on" ? true : false;
+        await chat.setMessagesAdminsOnly(status);
+        break;
+      case "tagall":
+        if (!isGroup)
+          return message.reply(
+            "Command ini hanya bisa digunakan didalam group"
+          );
+        let text = "╔══✪〘 Mention All 〙✪══\n";
+        let mentions = [];
+
+        for (let participant of chat.participants) {
+          mentions.push(`${participant.id.user}@c.us`);
+          text += "╠➥";
+          text += `@${participant.id.user}\n`;
+        }
+        text += "╚═〘 *P E L L  B O T* 〙";
+        await chat.sendMessage(text, {
+          mentions,
+        });
+        break;
+      case "grouplink":
+        if (!isGroup)
+          return message.reply(
+            "Command ini hanya bisa digunakan didalam group"
+          );
+
+        if (!isBotAdmin)
+          return message.reply(
+            "Command ini hanya bisa digunakan jika bot menjadi admin group"
+          );
+        message.reply(
+          `Link group : https://chat.whatsapp.com/${await chat.getInviteCode()}\nGunakan ${prefix}revoke untuk mereset link group`
+        );
+        break;
+      case "revoke":
+        if (!isGroup)
+          return message.reply(
+            "Command ini hanya bisa digunakan didalam group"
+          );
+        if (!isUserAdmin)
+          return message.reply(
+            "Command ini hanya bisa digunakan oleh admin group"
+          );
+        if (!isBotAdmin)
+          return message.reply(
+            "Command ini hanya bisa digunakan jika bot menjadi admin group"
+          );
+
+        await chat.revokeInvite().then(async () => {
+          message.reply(
+            `Berhasil revoke link group\nLink group baru: https://chat.whatsapp.com/${await chat.getInviteCode()}`
+          );
+        });
+
+        break;
+
       // Creator
       case "sticker":
       case "stiker":
-        if (
-          hasMedia ||
-          (hasQuotedMsg && (await message.getQuotedMessage()).hasMedia)
-        ) {
-          const getBodyImage = hasQuotedMsg
-            ? await message.getQuotedMessage()
-            : message;
-
+        if (hasMedia || hasQuotedMsg) {
+          const getBodyImage = hasQuotedMsg ? quotedMessage : message;
           try {
             const media = await getBodyImage.downloadMedia();
             await client.sendMessage(from, media, {
@@ -114,13 +177,8 @@ const HandlerMassages = async (client, message) => {
         break;
       case "stimg":
       case "stickertoimg":
-        if (
-          (await message.getQuotedMessage()).type == "sticker" &&
-          hasQuotedMsg
-        ) {
-          const media = await (
-            await message.getQuotedMessage()
-          ).downloadMedia();
+        if (quotedMessage.type == "sticker" && hasQuotedMsg) {
+          const media = await quotedMessage.downloadMedia();
           await client.sendMessage(from, media);
         } else {
           message.reply(`Silahkan reply sticker dengan caption ${prefix}stimg`);
@@ -129,7 +187,7 @@ const HandlerMassages = async (client, message) => {
       case "qrcreate":
         if (args.length === 0)
           return message.reply(
-            `Silahkan kirim command ${prefix}qrcode create {size} {teks} untuk membuat qrcode\n\nKirim atau reply gambar qrcode dengan command ${prefix}qrcode read untuk membaca qrcode`
+            `Silahkan kirim command ${prefix}qrcreate create {size} {teks} untuk membuat qrcode`
           );
 
         if (args[0] != null) {
@@ -148,18 +206,13 @@ const HandlerMassages = async (client, message) => {
           }
         } else {
           return message.reply(
-            `Silahkan kirim command ${prefix}qrcode create {size} {teks} untuk membuat qrcode\n\nKirim atau reply gambar qrcode dengan command ${prefix}qrcode read untuk membaca qrcode`
+            `Silahkan kirim command ${prefix}qrcreate create {size} {teks} untuk membuat qrcode`
           );
         }
         break;
       case "qrread":
-        if (
-          hasMedia ||
-          (hasQuotedMsg && (await message.getQuotedMessage()).hasMedia)
-        ) {
-          const getBodyImage = hasQuotedMsg
-            ? await message.getQuotedMessage()
-            : message;
+        if (hasMedia || hasQuotedMsg) {
+          const getBodyImage = hasQuotedMsg ? quotedMessage : message;
 
           try {
             const timestamp = Date.now();
@@ -185,7 +238,7 @@ const HandlerMassages = async (client, message) => {
           }
         } else {
           message.reply(
-            `Silahkan kirim command ${prefix}qrcode create {size} {teks} untuk membuat qrcode\n\nKirim atau reply gambar qrcode dengan command ${prefix}qrcode read untuk membaca qrcode`
+            `Kirim atau reply gambar qrread dengan command ${prefix}qrcode read untuk membaca qrcode`
           );
         }
         break;
@@ -215,6 +268,7 @@ const HandlerMassages = async (client, message) => {
               .random(requestedCategory)
               .then(async (imageUrl) => {
                 const media = await MessageMedia.fromUrl(imageUrl);
+                console.log(from);
                 await client.sendMessage(from, media);
               })
               .catch((error) => {
@@ -234,12 +288,46 @@ const HandlerMassages = async (client, message) => {
       case "nsfw":
         if (args.length == 0)
           return message.reply(
-            "Silahkan kirim command ${prefix}nsfw {kategori}\n\nList kategori :\n- waifu\n- neko\n- trap\n- blowjob"
+            `Silahkan kirim command ${prefix}nsfw {kategori}\n\nList kategori :\n- waifu\n- neko\n- trap\n- blowjob`
           );
         const category = args[0];
         const getNsfw = await anime.nsfw(category);
         const media = await MessageMedia.fromUrl(getNsfw);
         client.sendMessage(from, media);
+        break;
+
+      // Lain-lain
+      case "nik":
+        if (args.length === 0)
+          return message.reply(
+            `Silahkan kirim command ${prefix}nik {nik} untuk parse`
+          );
+
+        const nikInput = args[0];
+
+        if (nikInput.length !== 16) {
+          return message.reply("Format NIK tidak valid");
+        }
+
+        nik
+          .parseNIK(nikInput)
+          .then((nik) => {
+            const parse =
+              `Informasi NIK:\n` +
+              `Provinsi: ${nik.province()}\n` +
+              `Kabupaten/Kota: ${nik.kabupatenKota()}\n` +
+              `Kecamatan: ${nik.kecamatan()}\n` +
+              `Kodepos: ${nik.kodepos()}\n` +
+              `Jenis Kelamin: ${nik.kelamin()}\n` +
+              `Tanggal Lahir: ${nik.lahir()}\n` +
+              `Uniqcode: ${nik.uniqcode()}`;
+            message.reply(parse);
+          })
+          .catch((error) => {
+            console.error("Error reading NIK:", error.message);
+            return message.reply("Terjadi kesalahan saat membaca NIK");
+          });
+
         break;
       case "gempa":
         try {
@@ -257,7 +345,9 @@ const HandlerMassages = async (client, message) => {
               message += `Lokasi: ${Coordinates}\n`;
               message += `Google Maps: ${mapsUrl}\n\n`;
               client.sendMessage(from, message, {
-                linkPreview: { includePreview: true },
+                linkPreview: {
+                  includePreview: true,
+                },
               });
             }
           } else {

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon --watch index.js index.js"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +15,8 @@
     "fs-extra": "^11.2.0",
     "get-pixels": "^3.3.3",
     "jsqr": "^1.4.0",
+    "moment-timezone": "^0.5.44",
+    "nik-parser": "^1.0.1",
     "nodemon": "^3.0.2",
     "puppeteer": "^21.7.0",
     "qr-image": "^3.2.0",
